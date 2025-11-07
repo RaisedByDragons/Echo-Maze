@@ -1,79 +1,91 @@
 package levels;
 
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.Graphics2D;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-
 import gameStart.GamePanel;
-import utilz.Enums.Difficulty;
-import utilz.Enums.TileType;
 
-public class TutorialLevel extends Level{
+public class TutorialLevel extends Level {
 
-	private boolean isTutorial = true;
-	
-	public TutorialLevel(GamePanel gp) {
-		super(gp);
-	}
-	
-	public ArrayList<Level> createTutorialLevel() {
-	    ArrayList<Level> levelList = new ArrayList<>();
+    // Flag that identifies this level as a tutorial
+    private boolean isTutorial = true;
+    
+    // Constructor: passes the GamePanel reference to the superclass (Level)
+    public TutorialLevel(GamePanel gp) {
+        super(gp);
+    }
+    
+    // Creates a list of tutorial levels by reading multiple tutorial grid files
+    public ArrayList<Level> createTutorialLevel() {
+        ArrayList<Level> levelList = new ArrayList<>();
 
-	    String[] tutorialFiles = { "tutorial0.txt", "tutorial1.txt", "tutorial2.txt" };
-//	    int levelsToLoad = Math.min(numToCreate, tutorialFiles.length);
+        // List of tutorial text files that define level layouts
+        String[] tutorialFiles = { "tutorial0.txt", "tutorial1.txt", "tutorial2.txt" };
 
-	    for (int i = 0; i < tutorialFiles.length; i++) {
-	        int[][] grid = loadGridFromFile(tutorialFiles[i]);
+        // Loop through each tutorial file and build a Level from it
+        for (int i = 0; i < tutorialFiles.length; i++) {
+            // Load the level's tile grid data from the file
+            int[][] grid = loadGridFromFile(tutorialFiles[i]);
 
-	        if (grid != null) {
-//	            System.out.println("Loaded " + tutorialFiles[i]); // ADD THIS LINE
+            // If the grid loaded successfully, create and configure a Level
+            if (grid != null) {
+                Level level = new Level(gp); // Create a new level instance
+                level.setGrid(grid);         // Apply the grid layout
+                level.setShowInstructions(isTutorial, i); // Show tutorial instructions
+                levelList.add(level);        // Add to list of tutorial levels
+            }
+        }
 
-	            Level level = new Level(gp);
-	            level.setGrid(grid);
-	            level.setShowInstructions(isTutorial, i);
-	            levelList.add(level);
-	        }
-	    }
+        // Return all generated tutorial levels
+        return levelList;
+    }
+    
+    // Loads a level grid from a text file and converts it to a 2D int array
+    private int[][] loadGridFromFile(String filename) {
+        ArrayList<int[]> rows = new ArrayList<>();
 
-	    return levelList;
-	}
-	
-	private int[][] loadGridFromFile(String filename) {
-	    ArrayList<int[]> rows = new ArrayList<>();
+        // Try-with-resources automatically closes the file reader
+        try (BufferedReader br = new BufferedReader(new FileReader("res/levels/" + filename))) {
+            String line;
+            // Read each line of the file
+            while ((line = br.readLine()) != null) {
+                // Split the line by spaces to get tile values
+                String[] tokens = line.trim().split("\\s+");
+                int[] row = new int[tokens.length];
 
-	    try (BufferedReader br = new BufferedReader(new FileReader("res/levels/" + filename))) {
-	        String line;
-	        while ((line = br.readLine()) != null) {
-	            String[] tokens = line.trim().split("\\s+");
-	            int[] row = new int[tokens.length];
-	            for (int i = 0; i < tokens.length; i++) {
-	                row[i] = Integer.parseInt(tokens[i]);
-	            }
-	            rows.add(row);
-	        }
+                // Convert each value from String to int
+                for (int i = 0; i < tokens.length; i++) {
+                    row[i] = Integer.parseInt(tokens[i]);
+                }
 
-	        int[][] grid = new int[rows.size()][rows.get(0).length];
-	        for (int i = 0; i < rows.size(); i++) {
-	            grid[i] = rows.get(i);
-	        }
+                // Add the row to the list of all rows
+                rows.add(row);
+            }
 
-	        return grid;
+            // Convert ArrayList of rows into a 2D array
+            int[][] grid = new int[rows.size()][rows.get(0).length];
+            for (int i = 0; i < rows.size(); i++) {
+                grid[i] = rows.get(i);
+            }
 
-	    } catch (IOException | NumberFormatException e) {
-	        e.printStackTrace();
-	        return null;
-	    }
-	}
+            // Return the completed 2D grid
+            return grid;
 
-	public boolean isTutorial() {
-		return isTutorial;
-	}
+        } catch (IOException | NumberFormatException e) {
+            // Print any file or parsing errors
+            e.printStackTrace();
+            return null;
+        }
+    }
 
-	public void setTutorial(boolean isTutorial) {
-		this.isTutorial = isTutorial;
-	}
+    // Returns whether this is a tutorial level
+    public boolean isTutorial() {
+        return isTutorial;
+    }
+
+    // Sets whether this level should behave as a tutorial
+    public void setTutorial(boolean isTutorial) {
+        this.isTutorial = isTutorial;
+    }
 }

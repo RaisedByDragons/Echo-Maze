@@ -2,9 +2,10 @@ package utilz;
 
 import utilz.Enums.Direction;
 
+// Helper class containing methods for direction-related calculations
 public class HelpMethods {
 
-	
+    // Returns the direction when turning 90 degrees to the right
 	public static Direction turnRight(Direction dir) {
 	    return switch (dir) {
 	        case UP -> Direction.RIGHT;
@@ -14,6 +15,7 @@ public class HelpMethods {
 	    };
 	}
 
+    // Returns the direction when turning 90 degrees to the left
 	public static Direction turnLeft(Direction dir) {
 	    return switch (dir) {
 	        case UP -> Direction.LEFT;
@@ -23,6 +25,7 @@ public class HelpMethods {
 	    };
 	}
 
+    // Returns the opposite direction (180-degree turn)
 	public static Direction turnBack(Direction dir) {
 	    return switch (dir) {
 	        case UP -> Direction.DOWN;
@@ -32,6 +35,8 @@ public class HelpMethods {
 	    };
 	}
 
+    // Returns the change in X-coordinate for a given direction
+    // LEFT decreases X by 1, RIGHT increases X by 1, UP/DOWN does not change X
 	public static int dX(Direction dir) {
 	    return switch (dir) {
 	        case LEFT -> -1;
@@ -40,6 +45,8 @@ public class HelpMethods {
 	    };
 	}
 
+    // Returns the change in Y-coordinate for a given direction
+    // UP decreases Y by 1, DOWN increases Y by 1, LEFT/RIGHT does not change Y
 	public static int dY(Direction dir) {
 	    return switch (dir) {
 	        case UP -> -1;

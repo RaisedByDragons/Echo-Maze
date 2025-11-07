@@ -6,26 +6,35 @@ import java.util.Objects;
 import gameStart.GamePanel;
 import utilz.Enums.Direction;
 
+// Class for computing a path from an enemy or entity to the player using BFS-like search
 public class PathFinding {
 	
+	// Stores the directions to follow from start to player
 	public List<Direction> pathDirections;
 	
+	// Constructor calculates the path immediately when created
 	public PathFinding(GamePanel gp, int startX, int startY) {
+		// Get the grid of the current level
 		int[][] map = gp.getLevelManager().getCurrentLevel().getGrid();
 
+        // Starting point for pathfinding
         Point start = new Point(startX, startY, null, null);
+        // Target point is the player’s current position
         Point end = new Point(gp.getEntityManager().getPlayer().getCol(), gp.getEntityManager().getPlayer().getRow(), null, null);
+        
+        // Compute path as a list of directions
         pathDirections = FindPath(map, start, end);
         
         if (pathDirections == null) {
-        	System.out.println("No path found");
+        	System.out.println("No path found"); // Path could not be found
         }
 	}
 
+	// Inner class representing a single tile point in the grid
 	public static class Point {
-        public int x, y;
-        public Point previous;
-        public Direction previousDirection;
+        public int x, y; // Coordinates
+        public Point previous; // Previous point in the path
+        public Direction previousDirection; // Direction taken to reach this point
 
         public Point(int x, int y, Point previous, Direction previousDirection) {
             this.x = x;
@@ -34,13 +43,12 @@ public class PathFinding {
             this.previousDirection = previousDirection;
         }
 
+        // Returns a new Point offset by dx, dy, with this point as previous
         private Point offset(int dx, int dy, Direction dir) {
             return new Point(x + dx, y + dy, this, dir);
         }
         
-//        public String toString() { return String.format("(%d, %d)", x, y, direction); }
-
-		@Override
+        @Override
 	    public boolean equals(Object o) {
 	        if (!(o instanceof Point)) return false;
 	        Point point = (Point) o;
@@ -53,12 +61,14 @@ public class PathFinding {
 	    }
     }
 
+    // Checks if a point is within bounds and not a wall
     public static boolean IsWalkable(int[][] map, Point point) {
     	return point.y >= 0 && point.y < map.length &&
                 point.x >= 0 && point.x < map[0].length &&
                 map[point.y][point.x] != Enums.TileType.WALL.getValue();
     }
 
+    // Returns a list of all valid neighboring points (up, down, left, right)
     public static List<Point> FindNeighbors(int[][] map, Point point) {
     	List<Point> neighbors = new ArrayList<>();
         if (IsWalkable(map, point.offset(0, -1, Direction.UP)))    
@@ -72,63 +82,34 @@ public class PathFinding {
         return neighbors;
     }
 
+    // Main pathfinding function returning a list of directions from start to end
     public static List<Direction> FindPath(int[][] map, Point start, Point end) {
-    	List<Point> open = new ArrayList<>();
+    	List<Point> open = new ArrayList<>(); // Tiles to check
         open.add(start);
 
+        // BFS-like search loop
         while (!open.isEmpty()) {
             List<Point> newOpen = new ArrayList<>();
 
             for (Point current : open) {
                 for (Point neighbor : FindNeighbors(map, current)) {
+                    // Skip if already in open or newOpen
                     if (!containsPoint(open, neighbor) && !containsPoint(newOpen, neighbor)) {
                         if (neighbor.equals(end)) {
-                            return buildDirectionList(neighbor);
+                            return buildDirectionList(neighbor); // Path found
                         }
                         newOpen.add(neighbor);
                     }
                 }
             }
 
-            open = newOpen;
+            open = newOpen; // Continue with next layer of points
         }
 
-        return null; // No path
-//        boolean finished = false;
-//        List<Point> used = new ArrayList<>();
-//        used.add(start);
-//        while (!finished) {
-//            List<Point> newOpen = new ArrayList<>();
-//            for(int i = 0; i < used.size(); ++i){
-//                Point point = used.get(i);
-//                for (Point neighbor : FindNeighbors(map, point)) {
-//                    if (!used.contains(neighbor) && !newOpen.contains(neighbor)) {
-//                        newOpen.add(neighbor);
-//                    }
-//                }
-//            }
-//
-//            for(Point point : newOpen) {
-//                used.add(point);
-//                if (end.equals(point)) {
-//                    finished = true;
-//                    break;
-//                }
-//            }
-//
-//            if (!finished && newOpen.isEmpty())
-//                return null;
-//        }
-//
-//        List<Point> path = new ArrayList<>();
-//        Point point = used.get(used.size() - 1);
-//        while(point.previous != null) {
-//            path.add(0, point);
-//            point = point.previous;
-//        }
-//        return path;
+        return null; // No path found
     }
 
+    // Helper: check if a point exists in a list
     private static boolean containsPoint(List<Point> list, Point p) {
         for (Point point : list) {
             if (point.x == p.x && point.y == p.y)
@@ -137,12 +118,13 @@ public class PathFinding {
         return false;
     }
 
+    // Reconstructs the list of directions from the endpoint back to start
     private static List<Direction> buildDirectionList(Point endPoint) {
         List<Direction> dirList = new ArrayList<>();
         Point current = endPoint;
 
         while (current.previous != null) {
-            dirList.add(0, current.previousDirection); // Insert at start
+            dirList.add(0, current.previousDirection); // Insert at start to reverse order
             current = current.previous;
         }
 

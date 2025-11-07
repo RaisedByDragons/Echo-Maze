@@ -1,8 +1,6 @@
-/entities/
-/gameStart/
-/levels/
-/mechanics/
-/playersprites/
 /screens/
-/tiles/
+/levels/
+/gameStart/
+/entities/
+/mechanics/
 /utilz/

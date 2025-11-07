@@ -2,11 +2,8 @@ package entities;
 
 import java.awt.Graphics2D;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import entities.endOfLevel.EndOfLevel;
 import entities.enemies.Basic;
@@ -17,78 +14,96 @@ import entities.player.Player;
 import gameStart.GamePanel;
 import utilz.Enums.GameState;
 
-public class EntityManager extends Entity{
+/**
+ * Manages all entities in the game world including the player, enemies, and end-of-level marker.
+ * Responsible for spawning, updating, drawing, and resetting entities between levels.
+ */
+public class EntityManager extends Entity {
 
-	private int numEnemies;
+	// === ENEMY COUNTS AND PROPORTIONS ===
+	private int numEnemies;                   // Total number of enemies in the level
+	private double basicProportion;           // Fraction of enemies that are "Basic"
+	private double fastProportion;            // Fraction of enemies that are "Fast"
+	private double followProportion;          // Fraction of enemies that are "Follow"
 
-	private double basicProportion;
-	private double fastProportion;
-	private double followProportion;
+	private int numBasic;                     // Actual number of Basic enemies
+	private int numFast;                      // Actual number of Fast enemies
+	private int numFollow;                    // Actual number of Follow enemies
 	
-	private int numBasic;
-	private int numFast;
-	private int numFollow;
-	
-	private ArrayList<Entity> entityList = new ArrayList<>();
-	private Player player;
-	private EndOfLevel endOfLevel;
-//	private final HashMap<String, Float> enemyTypeProportions = new HashMap<>();
-	private final LinkedHashMap<String, Float> enemyTypeProportions = new LinkedHashMap<>();
+	// === ENTITY COLLECTIONS AND REFERENCES ===
+	private ArrayList<Entity> entityList = new ArrayList<>();   // Master list of all entities (player, enemies, end marker)
+	private Player player;                                      // Reference to player entity
+	private EndOfLevel endOfLevel;                              // Reference to end-of-level marker
+	private final LinkedHashMap<String, Float> enemyTypeProportions = new LinkedHashMap<>(); // Maps enemy types to their proportions
 
-	public EntityManager (GamePanel gp) {
+	/**
+	 * Constructs an EntityManager and associates it with the main GamePanel.
+	 */
+	public EntityManager(GamePanel gp) {
 		super(gp);
-		
-//		enemyTypeProportions.put("Basic", (float) basicProportion);
-//	    enemyTypeProportions.put("Fast", (float) fastProportion);
-//	    enemyTypeProportions.put("Follow", (float) followProportion);
-//		summonEntities();
-//		regenerateEnemies();
 	}
 	
+	/**
+	 * Creates and adds the player and end-of-level marker to the entity list.
+	 * Also spawns enemies based on the current game state.
+	 */
 	public void summonEntities() {
 		player = new Player(gp);
 		endOfLevel = new EndOfLevel(gp);
 		entityList.add(player);
 		entityList.add(endOfLevel);
-		
-		
 		regenerateEnemies();
-		
 	}
 	
+	/**
+	 * Clears all entities and regenerates the player, end-of-level marker, and enemies.
+	 */
 	public void regenerateAll() {
 		entityList = new ArrayList<>();
 		summonEntities();
 		regenerateEnemies();
 	}
 	
+	/**
+	 * Removes all enemies and repopulates them based on proportions or tutorial logic.
+	 * Tutorial levels have specific enemy setups.
+	 */
 	public void regenerateEnemies() {
-	    entityList.removeIf(e -> e instanceof Enemy);
+	    entityList.removeIf(e -> e instanceof Enemy); // Remove all existing enemies
 
-	    if(gp.getLevelManager().isTutorial()) {
-//			gp.getLevelManager().getTutorialLevel().setEnemyProportions(); //This calls itself
-			switch(gp.getLevelManager().getCurrentLevelNum()) {
-			case 0 -> setEnemyProportions(1,0,0);
-			case 1 -> setEnemyProportions(2,0,0);
-			case 2 -> setEnemyProportions(3, 1, 0);
+	    // Tutorial-specific setups
+	    if (gp.getLevelManager().isTutorial()) {
+			switch (gp.getLevelManager().getCurrentLevelNum()) {
+				case 0 -> setEnemyProportions(1,0,0);
+				case 1 -> setEnemyProportions(2,0,0);
+				case 2 -> setEnemyProportions(3,1,0);
 			}
 		}
 	    
-	    numBasic = (int) (numEnemies*basicProportion);
-		numFast = (int) (numEnemies*fastProportion);
-		numFollow = numEnemies - numBasic -numFast;
+	    // Compute enemy counts from proportions
+	    numBasic = (int) (numEnemies * basicProportion);
+		numFast = (int) (numEnemies * fastProportion);
+		numFollow = numEnemies - numBasic - numFast;
 		
-	    for (int i=0; i<numBasic; i++) {
+	    // Spawn Basic enemies
+	    for (int i = 0; i < numBasic; i++) {
 	    	entityList.add(new Basic(gp));
 	    }
-	    for (int i=0; i<numFast; i++) {
+	    // Spawn Fast enemies
+	    for (int i = 0; i < numFast; i++) {
 	    	entityList.add(new Fast(gp));
 	    }
-	    for (int i=0; i<numFollow; i++) {
+	    // Spawn Follow enemies
+	    for (int i = 0; i < numFollow; i++) {
 	    	entityList.add(new Follow(gp));
 	    }
 	}
 	
+	/**
+	 * Checks collisions between the player, enemies, and end-of-level tile.
+	 * - If the player reaches the end tile, proceeds to the next level or triggers win condition.
+	 * - If the player collides with any enemy, triggers Game Over.
+	 */
 	public void checkCollision() {
 
 		Player player = null;
@@ -100,8 +115,18 @@ public class EntityManager extends Entity{
 	            player = (Player) e;
 	        } else if (e instanceof EndOfLevel) {
 	            end = (EndOfLevel) e;
+	            // Check if player reached end of level
+	            if (player.getRow() == e.getRow() && player.getCol() == e.getCol()) {
+	            		if (gp.getLevelManager().getCurrentLevelNum() < gp.getLevelManager().getNumLevels() - 1) {
+	            			gp.nextLevel(); // Advance to next level
+	            		} else {
+	            			gp.setGameState(GameState.WINNER); // Final level reached
+	            		}
+	            		return;
+	            }
 	        } else if (e instanceof Enemy && player != null) {
 	            enemy = (Enemy) e;
+	            // Player collision with enemy
 	            if (enemy.getRow() == player.getRow() && enemy.getCol() == player.getCol()) {
 	                gp.setGameState(GameState.GAME_OVER);
 	                return;
@@ -109,7 +134,7 @@ public class EntityManager extends Entity{
 	        }
 	    }
 
-	    // Check for end of level
+	    // Redundant safety check for reaching end tile
 	    if (player != null && end != null &&
 	        player.getRow() == end.getRow() &&
 	        player.getCol() == end.getCol()) {
@@ -117,74 +142,98 @@ public class EntityManager extends Entity{
 	    }
 	}
 	
+	/**
+	 * Updates all entities each frame and performs collision checks.
+	 */
 	public void update() {
-		for(Entity e : entityList) {
+		for (Entity e : entityList) {
 			e.update();
 		}
 		checkCollision();
-		
-//		System.out.println("Num enemies = " + numEnemies);
 	}
 	
+	/**
+	 * Draws all entities to the screen.
+	 * @param g2 graphics context
+	 */
 	public void draw(Graphics2D g2) {
-		for(Entity e : entityList) {
+		for (Entity e : entityList) {
 			e.draw(g2);
 		}
 	}
 
+	/**
+	 * Called when progressing to a new level — resets entity states and regenerates enemies.
+	 */
 	public void nextLevel() {
-		for(Entity e : entityList) {
+		for (Entity e : entityList) {
 			e.nextLevel();
 		}
 		regenerateEnemies();
 	}
 	
+	/**
+	 * Fully resets all entities (used on full game reset or replay).
+	 */
 	public void resetAll() {
-		for(Entity e : entityList) {
+		for (Entity e : entityList) {
 			e.resetAll();
 		}
 		regenerateEnemies();
 	}
 	
+	/**
+	 * Resets entities for the current level only.
+	 */
 	public void resetLevel() {
-		for(Entity e : entityList) {
+		for (Entity e : entityList) {
 			e.resetLevel();
 		}
 		regenerateEnemies();
 	}
 	
+	/**
+	 * Returns the complete entity list (includes player, enemies, end tile).
+	 */
 	public ArrayList<Entity> getEnemyList() {
 		return entityList;
 	}
 
 	@Override
 	public void setDefaultSpawn() {
-		// TODO Auto-generated method stub
-		
+		// Not used for EntityManager
 	}
 
 	@Override
 	public void spawn(int col, int row) {
-		// TODO Auto-generated method stub
-		
+		// Not used for EntityManager
 	}
 
+	/**
+	 * Returns the player entity instance.
+	 */
 	public Player getPlayer() {
 		return player;
 	}
 
+	/**
+	 * Returns a list of enemy type names currently tracked.
+	 */
 	public List<String> getEnemyTypes() {
 	    return new ArrayList<>(enemyTypeProportions.keySet());
 	}
 
+	/**
+	 * Sets the total number of enemies and recalculates their distribution.
+	 */
 	public void setNumEnemies(int num) {
 	    this.numEnemies = Math.max(0, num);
 	    numBasic = (int)(numEnemies * basicProportion);
-	    numFast = (int)(numEnemies*fastProportion);
+	    numFast = (int)(numEnemies * fastProportion);
 	    numFollow = (int)(numEnemies * followProportion);
 	    int remainder = numEnemies - (numBasic + numFollow + numFast);
 
-	    numBasic += remainder;
+	    numBasic += remainder; // Assign any leftover count to Basic type
 	}
 	
 	public int getNumEnemies() {
@@ -215,12 +264,18 @@ public class EntityManager extends Entity{
 		this.numFollow = numFollow;
 	}
 	
+	/**
+	 * Sets proportions directly as percentages (not counts) for each enemy type.
+	 */
 	public void setEnemyProportions(double basicProp, double fastProp, double followProp) {
 		enemyTypeProportions.put("Basic", (float) basicProp);
         enemyTypeProportions.put("Fast", (float) fastProp);
         enemyTypeProportions.put("Follow", (float) followProp);
 	}
 	
+	/**
+	 * Sets enemy amounts by specific counts, then calculates proportions from them.
+	 */
 	public void setEnemyProportions(int basicNum, int fastNum, int followNum) {
 		numBasic = basicNum;
 		numFast = fastNum;
@@ -228,16 +283,19 @@ public class EntityManager extends Entity{
 		
 		numEnemies = numBasic + numFast + numFollow;
 
-        basicProportion = ((double) (numBasic) / numEnemies) + 0.000001;
-        fastProportion = ((double) (numFast) / numEnemies) + 0.000001; //Addition may not be needed,
-        followProportion = ((double) (numFollow) / numEnemies) + 0.000001; // but also shouldn't break anything
+        // Add a small value to avoid divide-by-zero issues
+        basicProportion = ((double) numBasic / numEnemies) + 0.000001;
+        fastProportion = ((double) numFast / numEnemies) + 0.000001;
+        followProportion = ((double) numFollow / numEnemies) + 0.000001;
 
         enemyTypeProportions.put("Basic", (float) basicProportion);
         enemyTypeProportions.put("Fast", (float) fastProportion);
         enemyTypeProportions.put("Follow", (float) followProportion);
-		
 	}
 
+	/**
+	 * Gets the number of enemies of a given type ("Basic", "Fast", or "Follow").
+	 */
 	public int getEnemyAmounts(String type) {
 	    if (!enemyTypeProportions.containsKey(type)) {
 	        System.out.println("Warning: enemy type '" + type + "' not found.");
@@ -254,42 +312,34 @@ public class EntityManager extends Entity{
 	    return count;
 	}
 	
+	/**
+	 * Adjusts enemy counts dynamically (e.g. +1 or -1) and recalculates proportions.
+	 */
 	public void adjustEnemyAmounts(String type, int dir) {
-	    // Step 1: Get current counts
-//	    int basic = numBasic;
-//	    int fast = numFast;
-//	    int follow = numFollow;
-
-	    // Step 2: Adjust selected type
+	    // Step 1: Adjust selected type
 	    switch (type) {
 	        case "Basic" -> numBasic = Math.max(0, numBasic + dir);
 	        case "Fast" -> numFast = Math.max(0, numFast + dir);
 	        case "Follow" -> numFollow = Math.max(0, numFollow + dir);
 	    }
 
-	    // Step 3: Update total enemy count
+	    // Step 2: Update total enemy count
 	    numEnemies = numBasic + numFast + numFollow;
 
-	    // Step 4: Update instance counts
-//	    numBasic = numBasic;
-//	    numFast = numFast;
-//	    numFollow = numFollow;
-
-	    // Step 5: Update proportions
-        basicProportion = ((double) (numBasic) / numEnemies) + 0.000001;
-        fastProportion = ((double) (numFast) / numEnemies) + 0.000001; //Addition may not be needed,
-        followProportion = ((double) (numFollow) / numEnemies) + 0.000001; // but also shouldn't break anything
+	    // Step 3: Update proportions
+        basicProportion = ((double) numBasic / numEnemies) + 0.000001;
+        fastProportion = ((double) numFast / numEnemies) + 0.000001;
+        followProportion = ((double) numFollow / numEnemies) + 0.000001;
 
         enemyTypeProportions.put("Basic", (float) basicProportion);
         enemyTypeProportions.put("Fast", (float) fastProportion);
         enemyTypeProportions.put("Follow", (float) followProportion);
-
-//	    regenerateEnemies();
 	}
 
+	/**
+	 * Returns the EndOfLevel entity instance.
+	 */
 	public EndOfLevel getEndOfLevel() {
 		return endOfLevel;
 	}
-	
-	
 }
